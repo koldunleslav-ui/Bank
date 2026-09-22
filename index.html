@@ -29,9 +29,18 @@
             max-width: 400px;
             width: 100%;
         }
+        /* Стиль для будинку з колонами (іконка банку) */
+        .bank-icon {
+            margin-bottom: 10px;
+        }
+        .bank-icon svg {
+            width: 50px;
+            height: 50px;
+            fill: #38bdf8;
+        }
         h1 {
             font-size: 24px;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             color: #38bdf8;
         }
         p {
@@ -107,6 +116,13 @@
 <body>
 
     <div class="card">
+        <!-- Будівля банку з колонами (SVG іконка) -->
+        <div class="bank-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 1L3 5v2h18V5l-9-4zM4 10h3v7H4v-7zm5 0h2v7H9v-7zm4 0h2v7h-2v-7zm5 0h3v7h-3v-7zM2 19h20v2H2v-2z"/>
+            </svg>
+        </div>
+
         <h1>TON Bank</h1>
         <p>Підключіть ваш TON гаманець для роботи з депозитами</p>
         
@@ -119,7 +135,7 @@
             <span style="font-size: 12px; color: #64748b;" id="wallet-address"></span>
         </div>
 
-        <!-- Форма депозиту (з'явиться після підключення гаманця) -->
+        <!-- Форма депозиту -->
         <div id="bank-interface" class="bank-section">
             <div class="input-group">
                 <label for="deposit-amount">Сума депозиту (UA):</label>
@@ -141,13 +157,11 @@
     </div>
 
     <script>
-        // Ініціалізація TON Connect UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://raw.githubusercontent.com/koldunleslav-ui/Bank/main/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
         });
 
-        // Відстеження зміни статусу підключення гаманця
         tonConnectUI.onStatusChange(walletInfo => {
             const infoBox = document.getElementById('wallet-info');
             const addressSpan = document.getElementById('wallet-address');
@@ -155,7 +169,6 @@
             const bankInterface = document.getElementById('bank-interface');
 
             if (walletInfo) {
-                // Гаманець підключено -> показуємо блоки
                 infoBox.style.display = 'block';
                 bankInterface.style.display = 'block';
                 
@@ -166,7 +179,6 @@
                 const userName = walletInfo.name || shortAddress;
                 nicknameSpan.innerText = userName;
             } else {
-                // Гаманець відключено -> ховаємо
                 infoBox.style.display = 'none';
                 bankInterface.style.display = 'none';
             }
