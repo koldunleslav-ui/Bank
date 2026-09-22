@@ -248,7 +248,6 @@
                 return;
             }
 
-            // Зберігаємо депозит у локальну пам'ять гаманця
             const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
             let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
             
@@ -282,7 +281,7 @@
 
             container.innerHTML = '';
             deposits.forEach((dep, index) => {
-                // Посилання для швидкого переказу на вашу скарбницю з коментарем
+                // Точно вказуємо вашу адресу скарбниці у форматі переказу Tonkeeper
                 const comment = encodeURIComponent(`Депозит UA: ${dep.amount} на ${dep.term} днів`);
                 const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?text=${comment}`;
 
