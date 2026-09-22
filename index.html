@@ -139,7 +139,7 @@
         </div>
 
         <h1>TON Bank</h1>
-        <p>Підключіть ваш TON гаманець для роботи з депозитами UA</p>
+        <p>Підключіть ваш TON гаманець для оформлення депозиту</p>
         
         <!-- Кнопка підключення гаманця -->
         <div id="ton-connect-button"></div>
@@ -153,8 +153,8 @@
         <!-- Форма депозиту -->
         <div id="bank-interface" class="bank-section">
             <div class="input-group">
-                <label for="deposit-amount">Сума депозиту (UA):</label>
-                <input type="number" id="deposit-amount" placeholder="Введіть кількість UA">
+                <label for="deposit-amount">Сума депозиту:</label>
+                <input type="number" id="deposit-amount" placeholder="Введіть кількість">
             </div>
 
             <div class="input-group">
@@ -178,6 +178,9 @@
     </div>
 
     <script>
+        // Ваш головний гаманець-скарбниця
+        const BANK_WALLET = "UQDXq1iAqu88tVRG62_k03kAXELu_1gzRBMye-VZoFRIRtWw";
+
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://raw.githubusercontent.com/koldunleslav-ui/Bank/main/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
@@ -211,7 +214,7 @@
             }
         });
 
-        function createDeposit() {
+        async function createDeposit() {
             const amountInput = document.getElementById('deposit-amount');
             const termSelect = document.getElementById('deposit-term');
             const statusMsg = document.getElementById('status-msg');
@@ -227,24 +230,63 @@
                 return;
             }
 
-            // Миттєво зберігаємо депозит у пам'ять для цього гаманця
-            const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
-            let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            
-            deposits.push({
-                amount: amount,
-                term: term,
-                rate: rate,
-                date: new Date().toLocaleDateString()
-            });
+            statusMsg.style.color = '#38bdf8';
+            statusMsg.innerText = 'Підтвердіть переказ у гаманці...';
 
-            localStorage.setItem(storageKey, JSON.stringify(deposits));
+            try {
+                // Формуємо текстовий коментар для платежу (наприклад: "DEPOSIT_30_100")
+                const commentText = `DEPOSIT_${term}_DAYS_${amount}_UA`;
+                const commentHex = stringToHex(commentText);
 
-            statusMsg.style.color = '#4ade80';
-            statusMsg.innerText = `Успішно! Депозит на ${amount} UA створено.`;
-            amountInput.value = '';
+                // Запит на переказ мінімальної суми комісії/платежу на вашу адресу з коментарем
+                const transaction = {
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [
+                        {
+                            address: BANK_WALLET,
+                            amount: "100000000", // 0.1 TON (або еквівалент для транзакції)
+                            payload: commentHex // Передаємо деталі в коментарі до транзакції
+                        }
+                    ]
+                };
 
-            loadUserDeposits();
+                // Відкриваємо гаманець користувача для реального переказу
+                const result = await tonConnectUI.sendTransaction(transaction);
+
+                // Тільки після успішного підтвердження в гаманці фіксуємо депозит у списку
+                const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
+                let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                
+                deposits.push({
+                    amount: amount,
+                    term: term,
+                    rate: rate,
+                    date: new Date().toLocaleDateString()
+                });
+
+                localStorage.setItem(storageKey, JSON.stringify(deposits));
+
+                statusMsg.style.color = '#4ade80';
+                statusMsg.innerText = `Успішно! Переказ виконано, депозит на ${amount} UA зафіксовано.`;
+                amountInput.value = '';
+
+                loadUserDeposits();
+
+            } catch (error) {
+                statusMsg.style.color = '#f87171';
+                statusMsg.innerText = 'Транзакцію скасовано в гаманці.';
+                console.error(error);
+            }
+        }
+
+        // Функція для кодування коментаря в Hex формат блокчейну
+        function stringToHex(str) {
+            let hex = '';
+            for (let i = 0; i < str.length; i++) {
+                let code = str.charCodeAt(i).toString(16);
+                hex += code.length < 2 ? '0' + code : code;
+            }
+            return '00000000' + hex;
         }
 
         function loadUserDeposits() {
