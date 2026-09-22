@@ -198,6 +198,7 @@
 
     <script>
         const BANK_WALLET = "UQDXq1iAqu88tVRG62_k03kAXELu_1gzRBMye-VZoFRIRtWw";
+        const UA_JETTON_MASTER = "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_";
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://raw.githubusercontent.com/koldunleslav-ui/Bank/main/tonconnect-manifest.json',
@@ -281,16 +282,16 @@
 
             container.innerHTML = '';
             deposits.forEach((dep, index) => {
-                // Точно вказуємо вашу адресу скарбниці у форматі переказу Tonkeeper
                 const comment = encodeURIComponent(`Депозит UA: ${dep.amount} на ${dep.term} днів`);
-                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?text=${comment}`;
+                // Додаємо параметр token у посилання Tonkeeper для автоматичного вибору джеттона UA
+                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&amount=${dep.amount}&text=${comment}`;
 
                 container.innerHTML += `
                     <div class="deposit-item">
                         <strong>#${index + 1} — ${dep.amount} UA</strong><br>
                         Термін: ${dep.term} днів (${dep.rate}% річних)<br>
                         <span style="color: #94a3b8; font-size: 11px;">Дата: ${dep.date}</span><br>
-                        <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати кошти на скарбницю</a>
+                        <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати UA на скарбницю</a>
                     </div>
                 `;
             });
