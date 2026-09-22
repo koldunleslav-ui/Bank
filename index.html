@@ -283,8 +283,8 @@
             container.innerHTML = '';
             deposits.forEach((dep, index) => {
                 const comment = encodeURIComponent(`Депозит UA: ${dep.amount} на ${dep.term} днів`);
-                // Додаємо параметр token у посилання Tonkeeper для автоматичного вибору джеттона UA
-                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&amount=${dep.amount}&text=${comment}`;
+                // Видалили параметр amount, щоб суму користувач вводив зручно в гаманці
+                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${comment}`;
 
                 container.innerHTML += `
                     <div class="deposit-item">
