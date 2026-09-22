@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TON Bank - Підключення гаманця</title>
+    <!-- Підключаємо TON Connect UI SDK -->
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #38bdf8;
+        }
+        p {
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+        #wallet-info {
+            margin-top: 20px;
+            font-size: 16px;
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            word-break: break-all;
+            display: none;
+        }
+        /* Контейнер для офіційної кнопки TON Connect */
+        #ton-connect-button {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>TON Bank</h1>
+        <p>Підключіть ваш TON гаманець для роботи з депозитами</p>
+        
+        <!-- Кнопка підключення гаманця від TON Connect -->
+        <div id="ton-connect-button"></div>
+
+        <!-- Блок для відображення нікнейму/адреси -->
+        <div id="wallet-info">
+            <span>Вітаю, <strong id="user-nickname">Користувач</strong>!</span><br>
+            <span style="font-size: 12px; color: #64748b;" id="wallet-address"></span>
+        </div>
+    </div>
+
+    <script>
+        // Ініціалізація TON Connect UI
+        //manifestUrl обов'язковий (тут вказано приклад, для продакшну створіть свій tonconnect-manifest.json)
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://raw.githubusercontent.com/koldunleslav-ui/Bank/main/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect-button'
+        });
+
+        // Відстеження зміни статусу підключення гаманця
+        tonConnectUI.onStatusChange(walletInfo => {
+            const infoBox = document.getElementById('wallet-info');
+            const addressSpan = document.getElementById('wallet-address');
+            const nicknameSpan = document.getElementById('user-nickname');
+
+            if (walletInfo) {
+                // Гаманець підключено
+                infoBox.style.display = 'block';
+                
+                const rawAddress = walletInfo.account.address;
+                // Форматуємо адресу для гарного вигляд (перші 4 і останні 4 символи)
+                const shortAddress = rawAddress.slice(0, 4) + '...' + rawAddress.slice(-4);
+                addressSpan.innerText = shortAddress;
+
+                // Перевіряємо, чи є ім'я користувача (якщо підтримується додатком/профілем), інакше показуємо скорочену адресу
+                const userName = walletInfo.name || shortAddress;
+                nicknameSpan.innerText = userName;
+            } else {
+                // Гаманець відключено
+                infoBox.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
