@@ -14,7 +14,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
             padding: 20px;
@@ -28,8 +28,8 @@
             text-align: center;
             max-width: 400px;
             width: 100%;
+            margin-top: 20px;
         }
-        /* Стиль для будинку з колонами (іконка банку) */
         .bank-icon {
             margin-bottom: 10px;
         }
@@ -57,6 +57,12 @@
             word-break: break-all;
             display: none;
             text-align: left;
+        }
+        .balance-box {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #38bdf8;
+            font-weight: bold;
         }
         #ton-connect-button {
             display: flex;
@@ -111,12 +117,27 @@
             margin-top: 10px;
             text-align: center;
         }
+        .deposits-list {
+            margin-top: 20px;
+            border-top: 1px solid #334155;
+            padding-top: 15px;
+            text-align: left;
+            display: none;
+        }
+        .deposit-item {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            border-left: 4px solid #38bdf8;
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <!-- Будівля банку з колонами (SVG іконка) -->
+        <!-- Будівля банку з колонами -->
         <div class="bank-icon">
             <svg viewBox="0 0 24 24">
                 <path d="M12 1L3 5v2h18V5l-9-4zM4 10h3v7H4v-7zm5 0h2v7H9v-7zm4 0h2v7h-2v-7zm5 0h3v7h-3v-7zM2 19h20v2H2v-2z"/>
@@ -129,10 +150,11 @@
         <!-- Кнопка підключення гаманця -->
         <div id="ton-connect-button"></div>
 
-        <!-- Блок для відображення нікнейму/адреси -->
+        <!-- Блок для відображення нікнейму/адреси та балансу -->
         <div id="wallet-info">
             <span>Вітаю, <strong id="user-nickname">Користувач</strong>!</span><br>
             <span style="font-size: 12px; color: #64748b;" id="wallet-address"></span>
+            <div class="balance-box">Баланс UA: <span id="user-balance">1,250.00</span> UA</div>
         </div>
 
         <!-- Форма депозиту -->
@@ -145,14 +167,20 @@
             <div class="input-group">
                 <label for="deposit-term">Термін:</label>
                 <select id="deposit-term">
-                    <option value="30">30 днів (10% річних)</option>
-                    <option value="90">90 днів (15% річних)</option>
-                    <option value="365">1 рік (25% річних)</option>
+                    <option value="30" data-rate="10">30 днів (10% річних)</option>
+                    <option value="90" data-rate="15">90 днів (15% річних)</option>
+                    <option value="365" data-rate="25">1 рік (25% річних)</option>
                 </select>
             </div>
 
             <button class="action-btn" onclick="createDeposit()">Покласти під відсотки</button>
             <div id="status-msg" class="info-text"></div>
+        </div>
+
+        <!-- Список активних депозитів -->
+        <div id="deposits-section" class="deposits-list">
+            <strong style="font-size: 14px; color: #38bdf8;">Ваші активні депозити:</strong>
+            <div id="deposits-container" style="margin-top: 10px;"></div>
         </div>
     </div>
 
@@ -162,32 +190,45 @@
             buttonRootId: 'ton-connect-button'
         });
 
+        let currentWalletAddress = '';
+
         tonConnectUI.onStatusChange(walletInfo => {
             const infoBox = document.getElementById('wallet-info');
             const addressSpan = document.getElementById('wallet-address');
             const nicknameSpan = document.getElementById('user-nickname');
             const bankInterface = document.getElementById('bank-interface');
+            const depositsSection = document.getElementById('deposits-section');
 
             if (walletInfo) {
                 infoBox.style.display = 'block';
                 bankInterface.style.display = 'block';
+                depositsSection.style.display = 'block';
                 
-                const rawAddress = walletInfo.account.address;
-                const shortAddress = rawAddress.slice(0, 4) + '...' + rawAddress.slice(-4);
+                currentWalletAddress = walletInfo.account.address;
+                const shortAddress = currentWalletAddress.slice(0, 4) + '...' + currentWalletAddress.slice(-4);
                 addressSpan.innerText = shortAddress;
 
                 const userName = walletInfo.name || shortAddress;
                 nicknameSpan.innerText = userName;
+
+                loadUserDeposits();
             } else {
                 infoBox.style.display = 'none';
                 bankInterface.style.display = 'none';
+                depositsSection.style.display = 'none';
+                currentWalletAddress = '';
             }
         });
 
         function createDeposit() {
-            const amount = document.getElementById('deposit-amount').value;
-            const term = document.getElementById('deposit-term').value;
+            const amountInput = document.getElementById('deposit-amount');
+            const termSelect = document.getElementById('deposit-term');
             const statusMsg = document.getElementById('status-msg');
+
+            const amount = parseFloat(amountInput.value);
+            const term = termSelect.value;
+            const selectedOption = termSelect.options[termSelect.selectedIndex];
+            const rate = selectedOption.getAttribute('data-rate');
 
             if (!amount || amount <= 0) {
                 statusMsg.style.color = '#f87171';
@@ -195,8 +236,49 @@
                 return;
             }
 
+            // Зберігаємо депозит у localStorage для цього гаманця
+            const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
+            let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            
+            const newDeposit = {
+                amount: amount,
+                term: term,
+                rate: rate,
+                date: new Date().toLocaleDateString()
+            };
+
+            deposits.push(newDeposit);
+            localStorage.setItem(storageKey, JSON.stringify(deposits));
+
             statusMsg.style.color = '#4ade80';
-            statusMsg.innerText = `Успішно! Запит на депозит ${amount} UA прийнято.`;
+            statusMsg.innerText = `Успішно! Депозит на ${amount} UA створено.`;
+            amountInput.value = '';
+
+            loadUserDeposits();
+        }
+
+        function loadUserDeposits() {
+            if (!currentWalletAddress) return;
+            
+            const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
+            const deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            const container = document.getElementById('deposits-container');
+            
+            if (deposits.length === 0) {
+                container.innerHTML = '<span style="color: #64748b; font-size: 12px;">У вас поки немає активних депозитів.</span>';
+                return;
+            }
+
+            container.innerHTML = '';
+            deposits.forEach((dep, index) => {
+                container.innerHTML += `
+                    <div class="deposit-item">
+                        <strong>#${index + 1} — ${dep.amount} UA</strong><br>
+                        Термін: ${dep.term} днів (${dep.rate}% річних)<br>
+                        <span style="color: #94a3b8; font-size: 11px;">Дата: ${dep.date}</span>
+                    </div>
+                `;
+            });
         }
     </script>
 </body>
