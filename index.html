@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UA Bank - Депозити</title>
+    <title>TON Bank - Депозити UA</title>
     <!-- Підключаємо TON Connect UI SDK -->
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <!-- Підключаємо Supabase JS -->
@@ -20,32 +20,42 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            box-sizing: border-box;
         }
         .card {
             background: #1e293b;
-            padding: 25px;
+            padding: 30px;
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            max-width: 420px;
-            width: 100%;
             text-align: center;
-            box-sizing: border-box;
+            max-width: 400px;
+            width: 100%;
         }
         h1 {
-            font-size: 22px;
-            margin-bottom: 5px;
+            font-size: 24px;
+            margin-bottom: 10px;
             color: #38bdf8;
         }
         p {
             color: #94a3b8;
-            font-size: 14px;
             margin-bottom: 20px;
+            font-size: 14px;
         }
+        #wallet-info {
+            margin-top: 20px;
+            font-size: 16px;
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+            word-break: break-all;
+            display: none;
+            text-align: left;
+        }
+        /* Контейнер для офіційної кнопки TON Connect */
         #ton-connect-button {
             display: flex;
             justify-content: center;
-            margin-bottom: 20px;
-            min-height: 50px;
+            margin-top: 15px;
         }
         .bank-section {
             display: none;
@@ -71,6 +81,7 @@
             background: #0f172a;
             color: #fff;
             box-sizing: border-box;
+            font-size: 14px;
         }
         button.action-btn {
             background: #38bdf8;
@@ -82,6 +93,7 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 10px;
+            font-size: 15px;
         }
         button.action-btn:hover {
             background: #0ea5e9;
@@ -90,22 +102,27 @@
             font-size: 13px;
             color: #94a3b8;
             margin-top: 10px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>UA Bank</h1>
-        <p>Криптодепозити у токенах UA</p>
+        <h1>TON Bank</h1>
+        <p>Підключіть ваш TON гаманець для роботи з депозитами</p>
         
-        <!-- Кнопка підключення гаманця -->
+        <!-- Кнопка підключення гаманця від TON Connect -->
         <div id="ton-connect-button"></div>
 
-        <!-- Банківський функціонал -->
+        <!-- Блок для відображення нікнейму/адреси -->
+        <div id="wallet-info">
+            <span>Вітаю, <strong id="user-nickname">Користувач</strong>!</span><br>
+            <span style="font-size: 12px; color: #64748b;" id="wallet-address"></span>
+        </div>
+
+        <!-- Секція депозитів (з'являється після підключення) -->
         <div id="bank-interface" class="bank-section">
-            <p style="margin-bottom: 10px;">Гаманець: <span id="wallet-short" style="color: #38bdf8; word-break: break-all;"></span></p>
-            
             <div class="input-group">
                 <label for="deposit-amount">Сума депозиту (UA):</label>
                 <input type="number" id="deposit-amount" placeholder="Введіть кількість UA">
@@ -126,43 +143,55 @@
     </div>
 
     <script>
-        // Ініціалізація TON Connect UI (робить кнопку видимою в першу чергу)
+        // Ініціалізація Supabase (безпечне підключення)
+        const SUPABASE_URL = 'https://zitfhobybklgmjpdcbvb.supabase.co';
+        const SUPABASE_ANON_KEY = 'ТУТ_БУДЕ_ВАШ_ANON_KEY'; // Можете вставити ключ з панелі Supabase
+        let supabase = null;
+
+        try {
+            if (SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'ТУТ_БУДЕ_ВАШ_ANON_KEY') {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {
+            console.log("Supabase init error:", e);
+        }
+
+        // Ініціалізація TON Connect UI
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://raw.githubusercontent.com/koldunleslav-ui/Bank/main/tonconnect-manifest.json',
             buttonRootId: 'ton-connect-button'
         });
 
-        // Налаштування Supabase (безпечне, не блокує інтерфейс якщо ключ не вказано)
-        const SUPABASE_URL = 'https://zitfhobybklgmjpdcbvb.supabase.co';
-        const SUPABASE_ANON_KEY = 'ВАШ_SUPABASE_ANON_KEY'; 
-        let supabase = null;
-        
-        try {
-            if (SUPABASE_ANON_KEY !== 'ВАШ_SUPABASE_ANON_KEY') {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-        } catch (e) {
-            console.log("Supabase init skipped");
-        }
-
         let currentUserAddress = null;
 
-        // Відстеження підключення гаманця
+        // Відстеження зміни статусу підключення гаманця
         tonConnectUI.onStatusChange(async walletInfo => {
+            const infoBox = document.getElementById('wallet-info');
+            const addressSpan = document.getElementById('wallet-address');
+            const nicknameSpan = document.getElementById('user-nickname');
             const bankInterface = document.getElementById('bank-interface');
-            const walletShortSpan = document.getElementById('wallet-short');
 
             if (walletInfo) {
-                currentUserAddress = walletInfo.account.address;
-                walletShortSpan.innerText = currentUserAddress.slice(0, 4) + '...' + currentUserAddress.slice(-4);
+                // Гаманець підключено
+                infoBox.style.display = 'block';
                 bankInterface.style.display = 'block';
+                
+                currentUserAddress = walletInfo.account.address;
+                const shortAddress = currentUserAddress.slice(0, 4) + '...' + currentUserAddress.slice(-4);
+                addressSpan.innerText = shortAddress;
 
+                const userName = walletInfo.name || 'Клієнт';
+                nicknameSpan.innerText = userName;
+
+                // Якщо Supabase підключено, реєструємо/перевіряємо користувача в базі
                 if (supabase) {
                     await registerUserInSupabase(currentUserAddress);
                 }
             } else {
-                currentUserAddress = null;
+                // Гаманець відключено
+                infoBox.style.display = 'none';
                 bankInterface.style.display = 'none';
+                currentUserAddress = null;
             }
         });
 
@@ -178,7 +207,7 @@
                     await supabase.from('users').insert([{ wallet_address: address }]);
                 }
             } catch (err) {
-                console.log('Помилка бази даних:', err);
+                console.log('Помилка реєстрації в базі:', err);
             }
         }
 
@@ -195,12 +224,12 @@
 
             if (!currentUserAddress) {
                 statusMsg.style.color = '#f87171';
-                statusMsg.innerText = 'Підключіть гаманець!';
+                statusMsg.innerText = 'Гаманець не підключено!';
                 return;
             }
 
             statusMsg.style.color = '#38bdf8';
-            statusMsg.innerText = 'Обробка депозиту...';
+            statusMsg.innerText = 'Створення депозиту...';
 
             if (supabase) {
                 try {
@@ -211,20 +240,20 @@
                                 user_wallet: currentUserAddress, 
                                 amount: parseFloat(amount), 
                                 term_days: parseInt(term),
-                                status: 'pending' 
+                                status: 'active' 
                             }
                         ]);
 
                     if (error) throw error;
                     statusMsg.style.color = '#4ade80';
-                    statusMsg.innerText = `Депозит на ${amount} UA успішно створено!`;
+                    statusMsg.innerText = `Депозит на ${amount} UA успішно оформлено!`;
                 } catch (err) {
                     statusMsg.style.color = '#f87171';
                     statusMsg.innerText = 'Помилка бази: ' + err.message;
                 }
             } else {
                 statusMsg.style.color = '#4ade80';
-                statusMsg.innerText = `Запит на ${amount} UA прийнято! (Базу ще не підключено)`;
+                statusMsg.innerText = `Депозит на ${amount} UA зафіксовано! (Підключіть ключ Supabase для збереження)`;
             }
         }
     </script>
