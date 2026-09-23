@@ -287,7 +287,21 @@
             if (!currentWalletAddress) return;
             
             const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
-            const deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            
+            // Виправляємо старі депозити без ID, щоб вони не мали #undefined
+            let updated = false;
+            deposits = deposits.map((dep, idx) => {
+                if (!dep.id) {
+                    dep.id = Date.now() + idx;
+                    updated = true;
+                }
+                return dep;
+            });
+            if (updated) {
+                localStorage.setItem(storageKey, JSON.stringify(deposits));
+            }
+
             const container = document.getElementById('deposits-container');
             
             if (deposits.length === 0) {
@@ -326,21 +340,27 @@
             const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
             let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
             
+            // Знаходимо кнопку за її унікальним атрибутом чи подією
             const btn = event.target;
+            const oldText = btn.innerText;
             btn.innerText = 'Перевірка...';
+            btn.disabled = true;
 
             try {
-                // Запит до публічного API Toncenter для отримання останніх транзакцій скарбниці
-                const response = await fetch(`https://toncenter.com/api/v2/getTransactions?address=${BANK_WALLET}&limit=15&archival=true`);
+                // Збільшуємо ліміт транзакцій до 40, щоб гарантовано захопити свіжий платіж
+                const response = await fetch(`https://toncenter.com/api/v2/getTransactions?address=${BANK_WALLET}&limit=40&archival=true`);
                 const data = await response.json();
 
                 if (data.ok && data.result) {
                     let found = false;
                     for (let tx of data.result) {
-                        // Перевіряємо текст у мійці/коментарі транзакції
-                        if (tx.in_msg && tx.in_msg.message && tx.in_msg.message.includes(commentText)) {
-                            found = true;
-                            break;
+                        // Перевіряємо текст у вхідному повідомленні
+                        if (tx.in_msg && tx.in_msg.message) {
+                            // Порівнюємо без урахування регістру
+                            if (tx.in_msg.message.toLowerCase().includes(commentText.toLowerCase())) {
+                                found = true;
+                                break;
+                            }
                         }
                     }
 
@@ -353,17 +373,20 @@
                         alert('Оплату успішно знайдено в блокчейні! Депозит активовано.');
                         loadUserDeposits();
                     } else {
-                        alert('Транзакцію з таким коментарем поки не знайдено. Спробуйте через хвилину після здійснення переказу.');
-                        btn.innerText = '🔄 Перевірити оплату';
+                        alert('Транзакцію поки не знайдено в останніх 40 переказах. Спробуйте ще раз через хвилинку.');
+                        btn.innerText = oldText;
+                        btn.disabled = false;
                     }
                 } else {
                     alert('Помилка зв’язку з блокчейном. Спробуйте ще раз.');
-                    btn.innerText = '🔄 Перевірити оплату';
+                    btn.innerText = oldText;
+                    btn.disabled = false;
                 }
             } catch (e) {
                 console.error(e);
                 alert('Не вдалося перевірити транзакцію. Спробуйте пізніше.');
-                btn.innerText = '🔄 Перевірити оплату';
+                btn.innerText = oldText;
+                btn.disabled = false;
             }
         }
     </script>
