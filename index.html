@@ -248,14 +248,18 @@
     </div>
 
     <script>
-        // Ініціалізація Telegram Web App для керування шапкою (header) у бота
+        // Отримуємо ім'я користувача з Telegram, якщо воно доступне
+        let telegramUserName = 'Користувач';
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             tg.ready();
             tg.expand();
-            // Встановлюємо правильну назву у верхній панелі Telegram бота
             if (tg.setHeaderColor) {
                 tg.setHeaderColor('#1e293b');
+            }
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                telegramUserName = user.first_name || user.username || 'Користувач';
             }
         }
 
@@ -284,7 +288,9 @@
                 depositsSection.style.display = 'block';
                 
                 currentWalletAddress = walletInfo.account.address;
-                currentUserNickname = walletInfo.name || 'Користувач';
+                
+                // Використовуємо ім'я з Telegram, ігноруючи технічну назву гаманця типу "Wallet"
+                currentUserNickname = telegramUserName;
                 
                 const shortAddress = currentWalletAddress.slice(0, 4) + '...' + currentWalletAddress.slice(-4);
                 addressSpan.innerText = shortAddress;
