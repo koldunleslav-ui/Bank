@@ -140,7 +140,7 @@
             background: #2563eb;
         }
         .withdraw-btn {
-            background: #f59e0b;
+            background: #475569; /* Сірий колір за замовчуванням (поки термін не вийшов) */
             color: #ffffff;
             border: none;
             width: 100%;
@@ -154,14 +154,13 @@
             display: inline-block;
             text-align: center;
             box-sizing: border-box;
+            transition: background 0.3s;
         }
-        .withdraw-btn:hover {
-            background: #d97706;
+        .withdraw-btn.ready {
+            background: #ef4444; /* Яскраво-червоний колір, коли термін вийшов! */
         }
-        .withdraw-btn:disabled, .withdraw-btn.disabled {
-            background: #475569;
-            color: #94a3b8;
-            cursor: not-allowed;
+        .withdraw-btn.ready:hover {
+            background: #dc2626;
         }
         .info-text {
             font-size: 13px;
@@ -290,7 +289,6 @@
                 return;
             }
 
-            // Розраховуємо дату завершення (додаємо дні до поточного часу)
             const now = Date.now();
             const finishTime = now + (term * 24 * 60 * 60 * 1000);
 
@@ -338,36 +336,38 @@
                 const commentEncoded = encodeURIComponent(commentText);
                 const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${commentEncoded}`;
 
-                // Розрахунок відсотків: (Сума * ставка * дні) / (365 * 100)
                 const termDays = dep.term;
                 const interest = (dep.amount * dep.rate * termDays) / (365 * 100);
                 const totalReturn = (dep.amount + interest).toFixed(2);
 
-                // Перевірка, чи минув термін депозиту
-                const isReadyToWithdraw = dep.paid && (now >= dep.finishTime);
                 const timeLeftDays = Math.ceil((dep.finishTime - now) / (1000 * 60 * 60 * 24));
+                const isReady = now >= dep.finishTime;
 
                 let statusHtml = '';
+                
+                // Формуємо текст для виводу в бот
+                const withdrawText = `🔔 ВИВІД ДЕПОЗИТУ\nПроєкт: TON Bank (UA Token)\nНік: ${currentUserNickname}\nСума до виводу: ${totalReturn} UA (Тіло: ${dep.amount} + Нараховані %: ${interest.toFixed(2)})\nГаманець: ${currentWalletAddress}\nID депозиту: #${dep.id}`;
+                const withdrawUrl = `https://t.me/share/url?url=${encodeURIComponent(withdrawText)}&to=${FEEDBACK_BOT}`;
+
                 if (dep.paid) {
-                    if (isReadyToWithdraw) {
-                        const withdrawText = `🔔 ВИВІД ДЕПОЗИТУ\nПроєкт: TON Bank (UA Token)\nНік: ${currentUserNickname}\nСума до виводу: ${totalReturn} UA (Тіло: ${dep.amount} + Нараховані %: ${interest.toFixed(2)})\nГаманець: ${currentWalletAddress}\nID депозиту: #${dep.id}`;
-                        const withdrawUrl = `https://t.me/share/url?url=${encodeURIComponent(withdrawText)}&to=${FEEDBACK_BOT}`;
-                        
+                    if (isReady) {
                         statusHtml = `
                             <div style="color: #10b981; font-weight: bold; margin-top: 5px;">✅ Оплачено та готово до виводу!</div>
-                            <a href="${withdrawUrl}" target="_blank" class="withdraw-btn" onclick="markWithdrawn(${dep.id})">💰 Вивести кошти (у бот)</a>
+                            <a href="${withdrawUrl}" target="_blank" class="withdraw-btn ready" onclick="markWithdrawn(${dep.id})">🚨 Вивести кошти (термін вийшов!)</a>
                         `;
                     } else {
                         statusHtml = `
                             <div style="color: #10b981; font-weight: bold; margin-top: 5px;">✅ Оплачено (Працює)</div>
                             <div style="color: #94a3b8; font-size: 11px; margin-top: 3px;">До виводу залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}</div>
-                            <button class="withdraw-btn disabled" disabled>💰 Вивести (доступно після закінчення)</button>
+                            <a href="#" class="withdraw-btn" onclick="alert('Термін депозиту ще не закінчився! Залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}'); return false;">💰 Вивести кошти (ще в процесі)</a>
                         `;
                     }
                 } else {
+                    // Якщо депозит ще не оплачений, але кнопку виводу теж показуємо (або попереджаємо)
                     statusHtml = `
                         <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати UA на скарбницю</a>
                         <button class="check-btn" onclick="checkPayment(${dep.id}, '${commentText}')">🔄 Перевірити оплату</button>
+                        <a href="#" class="withdraw-btn" onclick="alert('Спочатку сплатіть депозит на скарбницю та дочекайтеся активації!'); return false;">💰 Вивести кошти</a>
                     `;
                 }
 
@@ -393,7 +393,7 @@
             localStorage.setItem(storageKey, JSON.stringify(deposits));
             
             setTimeout(() => {
-                alert('Запит на вивод сформовано! Депозит закрито та обнулено.');
+                alert('Запит на вивод сформовано та передано в бот! Депозит закрито.');
                 loadUserDeposits();
             }, 1000);
         }
