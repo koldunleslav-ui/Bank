@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UA Bank - Депозити UA</title>
-    <!-- Підключаємо Telegram Web App та TON Connect UI SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
@@ -145,7 +144,7 @@
             background: #2563eb;
         }
         .withdraw-btn {
-            background: #475569; 
+            background: #ef4444; 
             color: #ffffff;
             border: none;
             width: 100%;
@@ -160,26 +159,8 @@
             text-align: center;
             box-sizing: border-box;
         }
-        .withdraw-btn.ready {
-            background: #ef4444; 
-        }
-        .withdraw-btn.ready:hover {
+        .withdraw-btn:hover {
             background: #dc2626;
-        }
-        .test-btn {
-            background: #8b5cf6;
-            color: #ffffff;
-            border: none;
-            width: 100%;
-            padding: 5px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 6px;
-            font-size: 11px;
-        }
-        .test-btn:hover {
-            background: #7c3aed;
         }
         .info-text {
             font-size: 12px;
@@ -193,13 +174,9 @@
             border-radius: 6px;
             margin-top: 6px;
             text-align: center;
-            background: #334155;
-            color: #f87171;
-            display: none;
-        }
-        .alert-box.success {
             background: #064e3b;
             color: #34d399;
+            display: none;
         }
         .deposits-list {
             margin-top: 15px;
@@ -387,9 +364,6 @@
                 const interest = (dep.amount * dep.rate) / 100;
                 const totalReturn = (dep.amount + interest).toFixed(2);
 
-                const timeLeftDays = Math.ceil((dep.finishTime - now) / (1000 * 60 * 60 * 24));
-                const isReady = now >= dep.finishTime;
-
                 let statusHtml = '';
                 const withdrawText = `🔔 ВИВІД ДЕПОЗИТУ\nПроєкт: UA Bank\nНік: ${currentUserNickname}\nСума до виводу: ${totalReturn} UA (Тіло: ${dep.amount} + Нараховані %: ${interest.toFixed(2)})\nГаманець: ${currentWalletAddress}\nID депозиту: #${dep.id}`;
                 const withdrawUrl = `https://t.me/share/url?url=${encodeURIComponent(withdrawText)}&to=${FEEDBACK_BOT}`;
@@ -401,27 +375,17 @@
                 else if (dep.term === 365) termLabel = '1 рік';
 
                 if (dep.paid) {
-                    if (isReady) {
-                        statusHtml = `
-                            <div style="color: #10b981; font-weight: bold; margin-top: 4px;">✅ Оплачено та готово до виводу!</div>
-                            <a href="${withdrawUrl}" target="_blank" class="withdraw-btn ready" onclick="markWithdrawn(${dep.id})">🚨 Вивести кошти (термін вийшов!)</a>
-                        `;
-                    } else {
-                        statusHtml = `
-                            <div style="color: #10b981; font-weight: bold; margin-top: 4px;">✅ Оплачено (Працює)</div>
-                            <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">До виводу залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}</div>
-                            <button class="withdraw-btn" onclick="showMsg(${dep.id}, 'Термін депозиту ще не закінчився! Залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}', false)">💰 Вивести кошти</button>
-                            <button class="test-btn" onclick="simulateFinish(${dep.id})">⚡ [Тест] Завершити достроково</button>
-                            <div id="msg-${dep.id}" class="alert-box"></div>
-                        `;
-                    }
+                    // Оплачений депозит одразу показує кнопку виводу на бота, щоб людина бачила куди і що виводиться
+                    statusHtml = `
+                        <div style="color: #10b981; font-weight: bold; margin-top: 4px;">✅ Оплачено та працює в роботі</div>
+                        <a href="${withdrawUrl}" target="_blank" class="withdraw-btn" onclick="markWithdrawn(${dep.id})">💰 Вивести кошти (на бота)</a>
+                    `;
                 } else {
                     const commentEncoded = encodeURIComponent(commentText);
                     const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${commentEncoded}`;
                     statusHtml = `
                         <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати UA на скарбницю</a>
                         <button class="check-btn" onclick="checkPayment(${dep.id})">🔄 Перевірити оплату</button>
-                        <div id="msg-${dep.id}" class="alert-box"></div>
                     `;
                 }
 
@@ -434,31 +398,6 @@
                     </div>
                 `;
             });
-        }
-
-        function simulateFinish(depositId) {
-            const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
-            let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
-            
-            deposits = deposits.map(d => {
-                if (d.id === depositId) {
-                    d.finishTime = Date.now() - 1000; 
-                }
-                return d;
-            });
-            localStorage.setItem(storageKey, JSON.stringify(deposits));
-            loadUserDeposits();
-        }
-
-        function showMsg(depId, text, isSuccess) {
-            const box = document.getElementById('msg-' + depId);
-            if (!box) return;
-            box.innerText = text;
-            box.className = 'alert-box ' + (isSuccess ? 'success' : '');
-            box.style.display = 'block';
-            setTimeout(() => {
-                box.style.display = 'none';
-            }, 4000);
         }
 
         function markWithdrawn(depositId) {
@@ -486,7 +425,6 @@
             });
             localStorage.setItem(storageKey, JSON.stringify(deposits));
             loadUserDeposits();
-            showMsg(depositId, 'Оплату успішно підтверджено!', true);
         }
     </script>
 </body>
