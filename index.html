@@ -124,6 +124,21 @@
         .pay-btn:hover {
             background: #059669;
         }
+        .check-btn {
+            background: #3b82f6;
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            padding: 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        .check-btn:hover {
+            background: #2563eb;
+        }
         .info-text {
             font-size: 13px;
             color: #4ade80;
@@ -145,12 +160,14 @@
             font-size: 13px;
             border-left: 4px solid #38bdf8;
         }
+        .deposit-item.paid {
+            border-left-color: #10b981;
+        }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <!-- Будівля банку з колонами -->
         <div class="bank-icon">
             <svg viewBox="0 0 24 24">
                 <path d="M12 1L3 5v2h18V5l-9-4zM4 10h3v7H4v-7zm5 0h2v7H9v-7zm4 0h2v7h-2v-7zm5 0h3v7h-3v-7zM2 19h20v2H2v-2z"/>
@@ -160,16 +177,13 @@
         <h1>TON Bank</h1>
         <p>Підключіть ваш TON гаманець для оформлення депозиту UA</p>
         
-        <!-- Кнопка підключення гаманця -->
         <div id="ton-connect-button"></div>
 
-        <!-- Блок для відображення адреси -->
         <div id="wallet-info">
             <span>Вітаю, <strong id="user-nickname">Користувач</strong>!</span><br>
             <span style="font-size: 12px; color: #64748b;" id="wallet-address"></span>
         </div>
 
-        <!-- Форма депозиту -->
         <div id="bank-interface" class="bank-section">
             <div class="input-group">
                 <label for="deposit-amount">Сума депозиту (UA):</label>
@@ -189,7 +203,6 @@
             <div id="status-msg" class="info-text"></div>
         </div>
 
-        <!-- Список активних депозитів -->
         <div id="deposits-section" class="deposits-list">
             <strong style="font-size: 14px; color: #38bdf8;">Ваші активні депозити:</strong>
             <div id="deposits-container" style="margin-top: 10px;"></div>
@@ -253,10 +266,12 @@
             let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
             
             deposits.push({
+                id: Date.now(),
                 amount: amount,
                 term: term,
                 rate: rate,
-                date: new Date().toLocaleDateString()
+                date: new Date().toLocaleDateString(),
+                paid: false
             });
 
             localStorage.setItem(storageKey, JSON.stringify(deposits));
@@ -282,19 +297,74 @@
 
             container.innerHTML = '';
             deposits.forEach((dep, index) => {
-                const comment = encodeURIComponent(`Депозит UA: ${dep.amount} на ${dep.term} днів`);
-                // Видалили параметр amount, щоб суму користувач вводив зручно в гаманці
-                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${comment}`;
+                const commentText = `Депозит #${dep.id}: ${dep.amount} UA`;
+                const commentEncoded = encodeURIComponent(commentText);
+                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${commentEncoded}`;
+
+                let statusHtml = '';
+                if (dep.paid) {
+                    statusHtml = `<div style="color: #10b981; font-weight: bold; margin-top: 5px;">✅ Успішно зараховано (Оплачено)</div>`;
+                } else {
+                    statusHtml = `
+                        <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати UA на скарбницю</a>
+                        <button class="check-btn" onclick="checkPayment(${dep.id}, '${commentText}')">🔄 Перевірити оплату</button>
+                    `;
+                }
 
                 container.innerHTML += `
-                    <div class="deposit-item">
+                    <div class="deposit-item ${dep.paid ? 'paid' : ''}">
                         <strong>#${index + 1} — ${dep.amount} UA</strong><br>
                         Термін: ${dep.term} днів (${dep.rate}% річних)<br>
-                        <span style="color: #94a3b8; font-size: 11px;">Дата: ${dep.date}</span><br>
-                        <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати UA на скарбницю</a>
+                        <span style="color: #94a3b8; font-size: 11px;">Дата: ${dep.date} | Коментар: ${commentText}</span><br>
+                        ${statusHtml}
                     </div>
                 `;
             });
+        }
+
+        async function checkPayment(depositId, commentText) {
+            const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
+            let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            
+            const btn = event.target;
+            btn.innerText = 'Перевірка...';
+
+            try {
+                // Запит до публічного API Toncenter для отримання останніх транзакцій скарбниці
+                const response = await fetch(`https://toncenter.com/api/v2/getTransactions?address=${BANK_WALLET}&limit=15&archival=true`);
+                const data = await response.json();
+
+                if (data.ok && data.result) {
+                    let found = false;
+                    for (let tx of data.result) {
+                        // Перевіряємо текст у мійці/коментарі транзакції
+                        if (tx.in_msg && tx.in_msg.message && tx.in_msg.message.includes(commentText)) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found) {
+                        deposits = deposits.map(d => {
+                            if (d.id === depositId) d.paid = true;
+                            return d;
+                        });
+                        localStorage.setItem(storageKey, JSON.stringify(deposits));
+                        alert('Оплату успішно знайдено в блокчейні! Депозит активовано.');
+                        loadUserDeposits();
+                    } else {
+                        alert('Транзакцію з таким коментарем поки не знайдено. Спробуйте через хвилину після здійснення переказу.');
+                        btn.innerText = '🔄 Перевірити оплату';
+                    }
+                } else {
+                    alert('Помилка зв’язку з блокчейном. Спробуйте ще раз.');
+                    btn.innerText = '🔄 Перевірити оплату';
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Не вдалося перевірити транзакцію. Спробуйте пізніше.');
+                btn.innerText = '🔄 Перевірити оплату';
+            }
         }
     </script>
 </body>
