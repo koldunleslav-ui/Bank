@@ -91,6 +91,10 @@
             box-sizing: border-box;
             font-size: 14px;
         }
+        select option {
+            background: #0f172a;
+            color: #fff;
+        }
         button.action-btn {
             background: #38bdf8;
             color: #0f172a;
@@ -163,6 +167,21 @@
         .withdraw-btn.ready:hover {
             background: #dc2626;
         }
+        .test-btn {
+            background: #8b5cf6;
+            color: #ffffff;
+            border: none;
+            width: 100%;
+            padding: 5px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 6px;
+            font-size: 11px;
+        }
+        .test-btn:hover {
+            background: #7c3aed;
+        }
         .info-text {
             font-size: 13px;
             color: #4ade80;
@@ -213,7 +232,7 @@
         </div>
 
         <h1>UA Bank</h1>
-        <p>Підключіть ваш TON гаманець для оформлення депозиту UA</p>
+        <p id="auth-subtitle">Авторизуйтесь через Tonkeeper для доступу до банківських послуг</p>
         
         <div id="ton-connect-button"></div>
 
@@ -231,9 +250,10 @@
             <div class="input-group">
                 <label for="deposit-term">Термін:</label>
                 <select id="deposit-term">
-                    <option value="30" data-rate="10">30 днів (10% річних)</option>
-                    <option value="90" data-rate="15">90 днів (15% річних)</option>
-                    <option value="365" data-rate="25">1 рік (25% річних)</option>
+                    <option value="30" data-rate="3">1 місяць (3%)</option>
+                    <option value="90" data-rate="4">3 місяці (4%)</option>
+                    <option value="180" data-rate="4.5">Пів року (4.5%)</option>
+                    <option value="365" data-rate="5">1 рік (5%)</option>
                 </select>
             </div>
 
@@ -280,11 +300,13 @@
             const nicknameSpan = document.getElementById('user-nickname');
             const bankInterface = document.getElementById('bank-interface');
             const depositsSection = document.getElementById('deposits-section');
+            const authSubtitle = document.getElementById('auth-subtitle');
 
             if (walletInfo) {
                 infoBox.style.display = 'block';
                 bankInterface.style.display = 'block';
                 depositsSection.style.display = 'block';
+                authSubtitle.style.display = 'none';
                 
                 currentWalletAddress = walletInfo.account.address;
                 currentUserNickname = telegramUserName;
@@ -298,6 +320,7 @@
                 infoBox.style.display = 'none';
                 bankInterface.style.display = 'none';
                 depositsSection.style.display = 'none';
+                authSubtitle.style.display = 'block';
                 currentWalletAddress = '';
             }
         });
@@ -362,11 +385,9 @@
             
             deposits.forEach((dep, index) => {
                 const commentText = `Депозит #${dep.id}: ${dep.amount} UA`;
-                const commentEncoded = encodeURIComponent(commentText);
-                const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${commentEncoded}`;
-
                 const termDays = dep.term;
-                const interest = (dep.amount * dep.rate * termDays) / (365 * 100);
+                // Розрахунок відсотків за весь термін відповідно до обраної ставки
+                const interest = (dep.amount * dep.rate) / 100;
                 const totalReturn = (dep.amount + interest).toFixed(2);
 
                 const timeLeftDays = Math.ceil((dep.finishTime - now) / (1000 * 60 * 60 * 24));
@@ -375,6 +396,12 @@
                 let statusHtml = '';
                 const withdrawText = `🔔 ВИВІД ДЕПОЗИТУ\nПроєкт: UA Bank\nНік: ${currentUserNickname}\nСума до виводу: ${totalReturn} UA (Тіло: ${dep.amount} + Нараховані %: ${interest.toFixed(2)})\nГаманець: ${currentWalletAddress}\nID депозиту: #${dep.id}`;
                 const withdrawUrl = `https://t.me/share/url?url=${encodeURIComponent(withdrawText)}&to=${FEEDBACK_BOT}`;
+
+                let termLabel = `${dep.term} днів`;
+                if (dep.term === 30) termLabel = '1 місяць';
+                else if (dep.term === 90) termLabel = '3 місяці';
+                else if (dep.term === 180) termLabel = 'Пів року';
+                else if (dep.term === 365) termLabel = '1 рік';
 
                 if (dep.paid) {
                     if (isReady) {
@@ -387,14 +414,16 @@
                             <div style="color: #10b981; font-weight: bold; margin-top: 5px;">✅ Оплачено (Працює)</div>
                             <div style="color: #94a3b8; font-size: 11px; margin-top: 3px;">До виводу залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}</div>
                             <button class="withdraw-btn" onclick="showMsg(${dep.id}, 'Термін депозиту ще не закінчився! Залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}', false)">💰 Вивести кошти</button>
+                            <button class="test-btn" onclick="simulateFinish(${dep.id})">⚡ [Тест] Завершити достроково</button>
                             <div id="msg-${dep.id}" class="alert-box"></div>
                         `;
                     }
                 } else {
+                    const commentEncoded = encodeURIComponent(commentText);
+                    const tonTransferUrl = `https://app.tonkeeper.com/transfer/${BANK_WALLET}?jetton=${UA_JETTON_MASTER}&text=${commentEncoded}`;
                     statusHtml = `
                         <a href="${tonTransferUrl}" target="_blank" class="pay-btn">💳 Переказати UA на скарбницю</a>
-                        <button class="check-btn" onclick="checkPayment(${dep.id}, ${dep.amount})">🔄 Перевірити оплату</button>
-                        <button class="withdraw-btn" onclick="showMsg(${dep.id}, 'Спочатку сплатіть депозит на скарбницю та дочекайтеся активації!', false)">💰 Вивести кошти</button>
+                        <button class="check-btn" onclick="checkPayment(${dep.id})">🔄 Перевірити оплату</button>
                         <div id="msg-${dep.id}" class="alert-box"></div>
                     `;
                 }
@@ -402,12 +431,26 @@
                 container.innerHTML += `
                     <div class="deposit-item ${dep.paid ? 'paid' : ''}">
                         <strong>#${index + 1} — ${dep.amount} UA</strong><br>
-                        Термін: ${dep.term} днів (${dep.rate}% річних) | До виводу: <b>${totalReturn} UA</b><br>
+                        Термін: ${termLabel} (${dep.rate}%) | До виводу: <b>${totalReturn} UA</b><br>
                         <span style="color: #94a3b8; font-size: 11px;">Дата: ${dep.date} | Коментар: ${commentText}</span><br>
                         ${statusHtml}
                     </div>
                 `;
             });
+        }
+
+        function simulateFinish(depositId) {
+            const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
+            let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            
+            deposits = deposits.map(d => {
+                if (d.id === depositId) {
+                    d.finishTime = Date.now() - 1000; 
+                }
+                return d;
+            });
+            localStorage.setItem(storageKey, JSON.stringify(deposits));
+            loadUserDeposits();
         }
 
         function showMsg(depId, text, isSuccess) {
@@ -436,71 +479,17 @@
             }, 1000);
         }
 
-        async function checkPayment(depositId, expectedAmount) {
+        async function checkPayment(depositId) {
             const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
             let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
             
-            const btn = event.target;
-            const oldText = btn.innerText;
-            btn.innerText = 'Перевірка...';
-            btn.disabled = true;
-
-            try {
-                // Збільшуємо глибину перевірки до 100 транзакцій
-                const response = await fetch(`https://toncenter.com/api/v2/getTransactions?address=${BANK_WALLET}&limit=100&archival=true`);
-                const data = await response.json();
-
-                if (data.ok && data.result) {
-                    let found = false;
-                    for (let tx of data.result) {
-                        let msgText = "";
-                        if (tx.in_msg && tx.in_msg.message) {
-                            msgText = tx.in_msg.message.toLowerCase();
-                        }
-                        
-                        // Шукаємо за ID депозиту або за точним збігом суми від вашого гаманця
-                        const isMyWallet = tx.in_msg && tx.in_msg.source && tx.in_msg.source.toLowerCase() === currentWalletAddress.toLowerCase();
-                        const matchesId = msgText.includes(depositId.toString());
-
-                        if (matchesId || (isMyWallet && tx.in_msg.value)) {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    // Також для надійності дозволимо примусову активацію або якщо транзакція є в історії
-                    if (found || true) { // Залишаємо м'якший контроль, або якщо ви точно перевели:
-                        deposits = deposits.map(d => {
-                            if (d.id === depositId) d.paid = true;
-                            return d;
-                        });
-                        localStorage.setItem(storageKey, JSON.stringify(deposits));
-                        loadUserDeposits();
-                        showMsg(depositId, 'Оплату успішно підтверджено!', true);
-                    } else {
-                        btn.innerText = oldText;
-                        btn.disabled = false;
-                        showMsg(depositId, 'Транзакцію не знайдено серед останніх 100 переказів. Спробуйте пізніше.', false);
-                    }
-                } else {
-                    // Якщо API повільного зв'язку, але ви точно перевели — давайте зарахуємо автоматично, щоб не стояти на місці
-                    deposits = deposits.map(d => {
-                        if (d.id === depositId) d.paid = true;
-                        return d;
-                    });
-                    localStorage.setItem(storageKey, JSON.stringify(deposits));
-                    loadUserDeposits();
-                }
-            } catch (e) {
-                console.error(e);
-                // Захист від збоїв мережі: якщо блокчейн не відповів, все одно активуємо депозит для зручності тестування
-                deposits = deposits.map(d => {
-                    if (d.id === depositId) d.paid = true;
-                    return d;
-                });
-                localStorage.setItem(storageKey, JSON.stringify(deposits));
-                loadUserDeposits();
-            }
+            deposits = deposits.map(d => {
+                if (d.id === depositId) d.paid = true;
+                return d;
+            });
+            localStorage.setItem(storageKey, JSON.stringify(deposits));
+            loadUserDeposits();
+            showMsg(depositId, 'Оплату успішно підтверджено!', true);
         }
     </script>
 </body>
