@@ -29,31 +29,31 @@
             text-align: center;
             max-width: 400px;
             width: 100%;
-            margin-top: 20px;
+            margin-top: 10px;
         }
         .bank-icon {
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         .bank-icon svg {
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             fill: #38bdf8;
         }
         h1 {
-            font-size: 24px;
+            font-size: 22px;
             margin-bottom: 5px;
             color: #38bdf8;
         }
         p {
             color: #94a3b8;
             margin-bottom: 15px;
-            font-size: 14px;
+            font-size: 13px;
         }
         #wallet-info {
             margin-top: 15px;
-            font-size: 15px;
+            font-size: 14px;
             background: #0f172a;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
             word-break: break-all;
             display: none;
@@ -62,26 +62,26 @@
         #ton-connect-button {
             display: flex;
             justify-content: center;
-            margin-top: 15px;
+            margin-top: 10px;
             min-height: 50px;
         }
         .bank-section {
             display: none;
-            margin-top: 20px;
+            margin-top: 15px;
             border-top: 1px solid #334155;
-            padding-top: 15px;
+            padding-top: 12px;
             text-align: left;
         }
         .input-group {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             color: #cbd5e1;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
-        input, select {
+        input {
             width: 100%;
             padding: 10px;
             border-radius: 8px;
@@ -91,9 +91,29 @@
             box-sizing: border-box;
             font-size: 14px;
         }
-        select option {
+        /* Стилі для кнопок вибору терміну */
+        .terms-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .term-btn {
             background: #0f172a;
-            color: #fff;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .term-btn.active {
+            background: #38bdf8;
+            color: #0f172a;
+            border-color: #38bdf8;
+            font-weight: bold;
         }
         button.action-btn {
             background: #38bdf8;
@@ -104,7 +124,7 @@
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 5px;
             font-size: 15px;
         }
         button.action-btn:hover {
@@ -159,7 +179,6 @@
             display: inline-block;
             text-align: center;
             box-sizing: border-box;
-            transition: background 0.3s;
         }
         .withdraw-btn.ready {
             background: #ef4444; 
@@ -183,14 +202,14 @@
             background: #7c3aed;
         }
         .info-text {
-            font-size: 13px;
+            font-size: 12px;
             color: #4ade80;
-            margin-top: 10px;
+            margin-top: 8px;
             text-align: center;
         }
         .alert-box {
-            font-size: 12px;
-            padding: 8px;
+            font-size: 11px;
+            padding: 6px;
             border-radius: 6px;
             margin-top: 6px;
             text-align: center;
@@ -203,18 +222,18 @@
             color: #34d399;
         }
         .deposits-list {
-            margin-top: 20px;
+            margin-top: 15px;
             border-top: 1px solid #334155;
-            padding-top: 15px;
+            padding-top: 12px;
             text-align: left;
             display: none;
         }
         .deposit-item {
             background: #0f172a;
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
-            margin-bottom: 10px;
-            font-size: 13px;
+            margin-bottom: 8px;
+            font-size: 12px;
             border-left: 4px solid #38bdf8;
         }
         .deposit-item.paid {
@@ -232,13 +251,13 @@
         </div>
 
         <h1>UA Bank</h1>
-        <p id="auth-subtitle">Авторизуйтесь через Tonkeeper для доступу до банківських послуг</p>
+        <p id="auth-subtitle">Авторизуйтесь через Tonkeeper для доступу</p>
         
         <div id="ton-connect-button"></div>
 
         <div id="wallet-info">
             <span>Вітаю, <strong id="user-nickname">Користувач</strong>!</span><br>
-            <span style="font-size: 12px; color: #64748b;" id="wallet-address"></span>
+            <span style="font-size: 11px; color: #64748b;" id="wallet-address"></span>
         </div>
 
         <div id="bank-interface" class="bank-section">
@@ -248,13 +267,13 @@
             </div>
 
             <div class="input-group">
-                <label for="deposit-term">Термін:</label>
-                <select id="deposit-term">
-                    <option value="30" data-rate="3">1 місяць (3%)</option>
-                    <option value="90" data-rate="4">3 місяці (4%)</option>
-                    <option value="180" data-rate="4.5">Пів року (4.5%)</option>
-                    <option value="365" data-rate="5">1 рік (5%)</option>
-                </select>
+                <label>Оберіть термін депозиту:</label>
+                <div class="terms-grid">
+                    <div class="term-btn active" onclick="selectTerm(30, 3, this)">1 місяць (3%)</div>
+                    <div class="term-btn" onclick="selectTerm(90, 4, this)">3 місяці (4%)</div>
+                    <div class="term-btn" onclick="selectTerm(180, 4.5, this)">Пів року (4.5%)</div>
+                    <div class="term-btn" onclick="selectTerm(365, 5, this)">1 рік (5%)</div>
+                </div>
             </div>
 
             <button class="action-btn" onclick="createDeposit()">Покласти під відсотки</button>
@@ -262,8 +281,8 @@
         </div>
 
         <div id="deposits-section" class="deposits-list">
-            <strong style="font-size: 14px; color: #38bdf8;">Ваші активні депозити:</strong>
-            <div id="deposits-container" style="margin-top: 10px;"></div>
+            <strong style="font-size: 13px; color: #38bdf8;">Ваші активні депозити:</strong>
+            <div id="deposits-container" style="margin-top: 8px;"></div>
         </div>
     </div>
 
@@ -293,6 +312,19 @@
 
         let currentWalletAddress = '';
         let currentUserNickname = '';
+        
+        // Змінні за замовчуванням (1 місяць)
+        let selectedTermDays = 30;
+        let selectedRate = 3;
+
+        function selectTerm(days, rate, element) {
+            selectedTermDays = days;
+            selectedRate = rate;
+            
+            // Знімаємо клас active з усіх кнопок і додаємо на натиснуту
+            document.querySelectorAll('.term-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+        }
 
         tonConnectUI.onStatusChange(walletInfo => {
             const infoBox = document.getElementById('wallet-info');
@@ -327,13 +359,9 @@
 
         function createDeposit() {
             const amountInput = document.getElementById('deposit-amount');
-            const termSelect = document.getElementById('deposit-term');
             const statusMsg = document.getElementById('status-msg');
 
             const amount = parseFloat(amountInput.value);
-            const term = parseInt(termSelect.value);
-            const selectedOption = termSelect.options[termSelect.selectedIndex];
-            const rate = parseFloat(selectedOption.getAttribute('data-rate'));
 
             if (!amount || amount <= 0) {
                 statusMsg.style.color = '#f87171';
@@ -342,7 +370,7 @@
             }
 
             const now = Date.now();
-            const finishTime = now + (term * 24 * 60 * 60 * 1000);
+            const finishTime = now + (selectedTermDays * 24 * 60 * 60 * 1000);
 
             const storageKey = 'ton_bank_deposits_' + currentWalletAddress;
             let deposits = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -350,8 +378,8 @@
             deposits.push({
                 id: now,
                 amount: amount,
-                term: term,
-                rate: rate,
+                term: selectedTermDays,
+                rate: selectedRate,
                 date: new Date().toLocaleDateString(),
                 finishTime: finishTime,
                 paid: false,
@@ -376,7 +404,7 @@
             const container = document.getElementById('deposits-container');
             
             if (deposits.length === 0) {
-                container.innerHTML = '<span style="color: #64748b; font-size: 12px;">У вас поки немає активних депозитів.</span>';
+                container.innerHTML = '<span style="color: #64748b; font-size: 11px;">У вас поки немає активних депозитів.</span>';
                 return;
             }
 
@@ -385,8 +413,6 @@
             
             deposits.forEach((dep, index) => {
                 const commentText = `Депозит #${dep.id}: ${dep.amount} UA`;
-                const termDays = dep.term;
-                // Розрахунок відсотків за весь термін відповідно до обраної ставки
                 const interest = (dep.amount * dep.rate) / 100;
                 const totalReturn = (dep.amount + interest).toFixed(2);
 
@@ -406,13 +432,13 @@
                 if (dep.paid) {
                     if (isReady) {
                         statusHtml = `
-                            <div style="color: #10b981; font-weight: bold; margin-top: 5px;">✅ Оплачено та готово до виводу!</div>
+                            <div style="color: #10b981; font-weight: bold; margin-top: 4px;">✅ Оплачено та готово до виводу!</div>
                             <a href="${withdrawUrl}" target="_blank" class="withdraw-btn ready" onclick="markWithdrawn(${dep.id})">🚨 Вивести кошти (термін вийшов!)</a>
                         `;
                     } else {
                         statusHtml = `
-                            <div style="color: #10b981; font-weight: bold; margin-top: 5px;">✅ Оплачено (Працює)</div>
-                            <div style="color: #94a3b8; font-size: 11px; margin-top: 3px;">До виводу залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}</div>
+                            <div style="color: #10b981; font-weight: bold; margin-top: 4px;">✅ Оплачено (Працює)</div>
+                            <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">До виводу залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}</div>
                             <button class="withdraw-btn" onclick="showMsg(${dep.id}, 'Термін депозиту ще не закінчився! Залишилось днів: ${timeLeftDays > 0 ? timeLeftDays : 1}', false)">💰 Вивести кошти</button>
                             <button class="test-btn" onclick="simulateFinish(${dep.id})">⚡ [Тест] Завершити достроково</button>
                             <div id="msg-${dep.id}" class="alert-box"></div>
@@ -432,7 +458,7 @@
                     <div class="deposit-item ${dep.paid ? 'paid' : ''}">
                         <strong>#${index + 1} — ${dep.amount} UA</strong><br>
                         Термін: ${termLabel} (${dep.rate}%) | До виводу: <b>${totalReturn} UA</b><br>
-                        <span style="color: #94a3b8; font-size: 11px;">Дата: ${dep.date} | Коментар: ${commentText}</span><br>
+                        <span style="color: #94a3b8; font-size: 10px;">Дата: ${dep.date}</span><br>
                         ${statusHtml}
                     </div>
                 `;
