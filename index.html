@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UA Bank - Депозити UA</title>
-    <!-- Підключаємо TON Connect UI SDK -->
+    <!-- Підключаємо Telegram Web App та TON Connect UI SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
         body {
@@ -247,6 +248,17 @@
     </div>
 
     <script>
+        // Ініціалізація Telegram Web App для керування шапкою (header) у бота
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            // Встановлюємо правильну назву у верхній панелі Telegram бота
+            if (tg.setHeaderColor) {
+                tg.setHeaderColor('#1e293b');
+            }
+        }
+
         const BANK_WALLET = "UQDXq1iAqu88tVRG62_k03kAXELu_1gzRBMye-VZoFRIRtWw";
         const UA_JETTON_MASTER = "EQBrD-UZ8w2tAyxCNjO8lF4ioTwI-ELiQgF7kclC7gM2UOO_";
         const FEEDBACK_BOT = "tokenpist_bot";
